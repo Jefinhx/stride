@@ -103,7 +103,7 @@ function HomeContent() {
     justifyContent: 'center', 
     background: '#fff', 
     boxShadow: '0 4px 10px rgba(0,0,0,0.03)', 
-    height: '100%', // Mudança 1: O card agora preenche a altura da célula do grid
+    height: '80%', // Mudança 1: O card agora preenche a altura da célula do grid
     minHeight: '130px' // Mantém uma base mínima por segurança
   };
 
