@@ -104,7 +104,7 @@ function HomeContent() {
     justifyContent: 'center', 
     background: '#fff', 
     boxShadow: '0 4px 10px rgba(0,0,0,0.03)', 
-    height: '165px' // <--- ALTERE ESTE VALOR (ex: 135px, 130px...) PARA AJUSTAR A TELA
+    height: '175px' // <--- ALTERE ESTE VALOR (ex: 135px, 130px...) PARA AJUSTAR A TELA
   };
 
   return (
