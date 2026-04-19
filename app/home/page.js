@@ -95,7 +95,6 @@ function HomeContent() {
 
   const navItemStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer', flex: 1 };
   
-  // AQUI É ONDE VOCÊ VAI MEXER:
   const cardStyle = { 
     borderRadius: '20px', 
     display: 'flex', 
@@ -104,13 +103,15 @@ function HomeContent() {
     justifyContent: 'center', 
     background: '#fff', 
     boxShadow: '0 4px 10px rgba(0,0,0,0.03)', 
-    height: '165px' // <--- ALTERE ESTE VALOR (ex: 135px, 130px...) PARA AJUSTAR A TELA
+    height: '100%', // Mudança 1: O card agora preenche a altura da célula do grid
+    minHeight: '130px' // Mantém uma base mínima por segurança
   };
 
   return (
     <div style={{ height: '100vh', width: '100vw', background: '#F8F9FB', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       
-      <div style={{ padding: '20px 25px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Header com padding reduzido para economizar espaço vertical */}
+      <div style={{ padding: '15px 25px 5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '38px', height: '38px', background: PRIMARY_COLOR, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <i className="fa-solid fa-bolt" style={{ color: '#fff', fontSize: '18px' }}></i>
@@ -126,15 +127,24 @@ function HomeContent() {
         </div>
       </div>
 
-      <div style={{ padding: '10px 25px 15px' }}>
+      <div style={{ padding: '5px 25px 10px' }}>
         <div style={{ display: 'flex', gap: '10px' }}>
           {['Dia', 'Semana', 'Mês'].map((p) => (
-            <button key={p} onClick={() => setFiltro(p)} style={{ flex: 1, padding: '12px 0', borderRadius: '15px', border: 'none', background: filtro === p ? PRIMARY_COLOR : '#fff', color: filtro === p ? '#fff' : '#999', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>{p}</button>
+            <button key={p} onClick={() => setFiltro(p)} style={{ flex: 1, padding: '10px 0', borderRadius: '15px', border: 'none', background: filtro === p ? PRIMARY_COLOR : '#fff', color: filtro === p ? '#fff' : '#999', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>{p}</button>
           ))}
         </div>
       </div>
 
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', padding: '0 25px 100px', alignContent: 'start' }}>
+      {/* Grid com Mudança 2: Ajuste de proporção dinâmico */}
+      <div style={{ 
+        flex: 1, 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(2, 1fr)', 
+        gridTemplateRows: 'repeat(3, 1fr)', // Força 3 linhas iguais no espaço disponível
+        gap: '10px', 
+        padding: '0 25px 100px', 
+        maxHeight: 'calc(100vh - 200px)' // Mudança 3: Limita a altura do grid para não empurrar a navbar
+      }}>
         
         <div style={{ ...cardStyle, background: ACCENT_GRADIENT, color: '#fff' }}>
           <i className="fa-solid fa-fire" style={{ fontSize: '22px', marginBottom: '5px' }}></i>
