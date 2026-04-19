@@ -28,7 +28,6 @@ function HomeContent() {
     tempoTotal: '0 min' 
   });
 
-  // 1. CARREGAR DADOS QUE JÁ ESTÃO NO NOSSO BANCO (Rápido)
   const carregarMetricasLocais = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -73,27 +72,18 @@ function HomeContent() {
     }
   }, [filtro]);
 
-  // 2. BUSCAR NOVIDADES NO STRAVA (Silencioso em background)
   const sincronizarSilencioso = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Pega o token para falar com o Strava
-    const { data: perfil } = await supabase
-      .from('perfis')
-      .select('strava_access_token')
-      .eq('id', user.id)
-      .single();
-
+    const { data: perfil } = await supabase.from('perfis').select('strava_access_token').eq('id', user.id).single();
     if (!perfil?.strava_access_token) return;
 
     try {
-      // Busca apenas as 30 últimas atividades (mais que suficiente para um sync diário)
       const res = await fetch(`https://www.strava.com/api/v3/athlete/activities?per_page=30`, {
         headers: { 'Authorization': `Bearer ${perfil.strava_access_token}` }
       });
       const stravaData = await res.json();
-
       if (stravaData && stravaData.length > 0) {
         const formatadas = stravaData.map(ativ => ({
           user_id: user.id,
@@ -106,121 +96,121 @@ function HomeContent() {
           calorias_estimadas: Number(((ativ.distance / 1000) * 70).toFixed(2)),
           cadencia_media_ppm: ativ.average_cadence ? Math.round(ativ.average_cadence * 2) : 0
         }));
-
-        // O upsert garante que ele só adicione o que for REALMENTE novo
-        const { error: upsertError } = await supabase
-          .from('atividades')
-          .upsert(formatadas, { onConflict: 'strava_activity_id' });
-        
-        // Se entrou dado novo, recarrega a tela silenciosamente
-        if (!upsertError) {
-          await carregarMetricasLocais(); 
-        }
+        await supabase.from('atividades').upsert(formatadas, { onConflict: 'strava_activity_id' });
+        await carregarMetricasLocais(); 
       }
-    } catch (e) {
-      console.error("Sync falhou, mas o usuário nem percebeu:", e);
-    }
+    } catch (e) { console.error(e); }
   }, [carregarMetricasLocais]);
 
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserProfile(user.user_metadata);
-      }
-      // Primeiro carrega o que já temos (velocidade)
+      if (user) setUserProfile(user.user_metadata);
       await carregarMetricasLocais();
-      // Depois, sem avisar ninguém, checa se tem coisa nova no Strava
       sincronizarSilencioso();
     };
     init();
   }, [filtro, carregarMetricasLocais, sincronizarSilencioso]);
 
   const navItemStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer', flex: 1 };
-  const cardStyle = { borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', padding: '10px' };
+  
+  // AJUSTE DE ALTURA: Agora os cards usam uma altura dinâmica baseada na tela
+  const cardStyle = { 
+    borderRadius: '20px', 
+    display: 'flex', 
+    flexDirection: 'column', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    background: '#fff', 
+    boxShadow: '0 4px 10px rgba(0,0,0,0.03)', 
+    height: '110px' // Altura fixa reduzida para caber no grid
+  };
 
   return (
     <div style={{ height: '100vh', width: '100vw', background: '#F8F9FB', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       
-      {/* HEADER SECTION */}
-      <div style={{ padding: '20px 25px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* HEADER SECTION - Espaçamento reduzido */}
+      <div style={{ padding: '15px 25px 5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '38px', height: '38px', background: PRIMARY_COLOR, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <i className="fa-solid fa-bolt" style={{ color: '#fff', fontSize: '18px' }}></i>
+          <div style={{ width: '35px', height: '35px', background: PRIMARY_COLOR, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <i className="fa-solid fa-bolt" style={{ color: '#fff', fontSize: '16px' }}></i>
           </div>
-          <span style={{ fontWeight: '900', fontSize: '18px', color: '#333' }}>RUNNER</span>
+          <span style={{ fontWeight: '900', fontSize: '16px', color: '#333' }}>RUNNER</span>
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <i className="fa-regular fa-bell" style={{ fontSize: '20px', color: '#666' }}></i>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', border: `2px solid ${PRIMARY_COLOR}` }}>
-            <img 
-              src={userProfile?.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"} 
-              alt="Perfil" 
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-            />
+          <i className="fa-regular fa-bell" style={{ fontSize: '18px', color: '#666' }}></i>
+          <div style={{ width: '35px', height: '35px', borderRadius: '50%', overflow: 'hidden', border: `2px solid ${PRIMARY_COLOR}` }}>
+            <img src={userProfile?.avatar_url || ""} alt="P" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         </div>
       </div>
 
-      {/* FILTER BUTTONS */}
-      <div style={{ padding: '10px 25px 15px' }}>
-        <div style={{ display: 'flex', gap: '10px' }}>
+      {/* FILTER BUTTONS - Reduzido para ganhar espaço */}
+      <div style={{ padding: '10px 25px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
           {['Dia', 'Semana', 'Mês'].map((p) => (
-            <button key={p} onClick={() => setFiltro(p)} style={{ flex: 1, padding: '12px 0', borderRadius: '15px', border: 'none', background: filtro === p ? PRIMARY_COLOR : '#fff', color: filtro === p ? '#fff' : '#999', fontWeight: '800', fontSize: '14px', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>{p}</button>
+            <button key={p} onClick={() => setFiltro(p)} style={{ flex: 1, padding: '10px 0', borderRadius: '12px', border: 'none', background: filtro === p ? PRIMARY_COLOR : '#fff', color: filtro === p ? '#fff' : '#999', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}>{p}</button>
           ))}
         </div>
       </div>
 
-      {/* METRICS GRID */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gridTemplateRows: 'repeat(3, 1fr)', gap: '12px', padding: '0 25px 100px' }}>
+      {/* METRICS GRID - Ajustado para não rolar */}
+      <div style={{ 
+        flex: 1, 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(2, 1fr)', 
+        gap: '10px', 
+        padding: '5px 25px 100px', // Padding inferior maior por causa da navbar
+        alignContent: 'start' 
+      }}>
         
         <div style={{ ...cardStyle, background: ACCENT_GRADIENT, color: '#fff' }}>
-          <i className="fa-solid fa-fire" style={{ fontSize: '22px', marginBottom: '5px' }}></i>
-          <span style={{ fontSize: '12px', fontWeight: '700' }}>Total Calorias</span>
-          <b style={{ fontSize: '16px' }}>{metricas.calorias} <small style={{fontSize:'10px'}}>kcal</small></b>
+          <i className="fa-solid fa-fire" style={{ fontSize: '18px', marginBottom: '4px' }}></i>
+          <span style={{ fontSize: '11px', fontWeight: '700' }}>Total Calorias</span>
+          <b style={{ fontSize: '15px' }}>{metricas.calorias} <small style={{fontSize:'10px'}}>kcal</small></b>
         </div>
 
         <div style={cardStyle}>
-          <i className="fa-solid fa-route" style={{ fontSize: '22px', color: PRIMARY_COLOR, marginBottom: '5px' }}></i>
-          <span style={{ fontSize: '12px', fontWeight: '700', color: '#666' }}>Total Distância</span>
-          <b style={{ fontSize: '16px', color: '#333' }}>{metricas.distancia} <small style={{fontSize:'10px', color:'#999'}}>km</small></b>
+          <i className="fa-solid fa-route" style={{ fontSize: '18px', color: PRIMARY_COLOR, marginBottom: '4px' }}></i>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: '#666' }}>Total Distância</span>
+          <b style={{ fontSize: '15px', color: '#333' }}>{metricas.distancia} <small style={{fontSize:'10px', color:'#999'}}>km</small></b>
         </div>
 
         <div style={cardStyle}>
-          <i className="fa-solid fa-shoe-prints" style={{ fontSize: '22px', color: PRIMARY_COLOR, marginBottom: '5px' }}></i>
-          <span style={{ fontSize: '12px', fontWeight: '700', color: '#666', marginBottom: '4px' }}>Cadência</span>
+          <i className="fa-solid fa-shoe-prints" style={{ fontSize: '18px', color: PRIMARY_COLOR, marginBottom: '4px' }}></i>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: '#666' }}>Cadência</span>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: '14px', fontWeight: '800', color: '#333' }}>{metricas.cadenciaMin} <small style={{fontSize:'9px', color:'#999'}}>min</small></span>
-            <span style={{ fontSize: '14px', fontWeight: '800', color: '#333' }}>{metricas.cadenciaMax} <small style={{fontSize:'9px', color:'#999'}}>max</small></span>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#333' }}>{metricas.cadenciaMin} <small style={{fontSize:'9px', color:'#999'}}>min</small></span>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#333' }}>{metricas.cadenciaMax} <small style={{fontSize:'9px', color:'#999'}}>max</small></span>
           </div>
         </div>
 
         <div style={cardStyle}>
-          <i className="fa-solid fa-gauge-high" style={{ fontSize: '22px', color: PRIMARY_COLOR, marginBottom: '5px' }}></i>
-          <span style={{ fontSize: '12px', fontWeight: '700', color: '#666', marginBottom: '4px' }}>Velocidade</span>
+          <i className="fa-solid fa-gauge-high" style={{ fontSize: '18px', color: PRIMARY_COLOR, marginBottom: '4px' }}></i>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: '#666' }}>Velocidade</span>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: '14px', fontWeight: '800', color: '#333' }}>{metricas.velMin} <small style={{fontSize:'9px', color:'#999'}}>min</small></span>
-            <span style={{ fontSize: '14px', fontWeight: '800', color: '#333' }}>{metricas.velMax} <small style={{fontSize:'9px', color:'#999'}}>max</small></span>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#333' }}>{metricas.velMin} <small style={{fontSize:'9px', color:'#999'}}>min</small></span>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#333' }}>{metricas.velMax} <small style={{fontSize:'9px', color:'#999'}}>max</small></span>
           </div>
         </div>
 
         <div style={cardStyle}>
-          <i className="fa-solid fa-person-running" style={{ fontSize: '22px', color: PRIMARY_COLOR, marginBottom: '5px' }}></i>
-          <span style={{ fontSize: '12px', fontWeight: '700', color: '#666' }}>Atividades</span>
-          <b style={{ fontSize: '16px', color: '#333' }}>{metricas.atividades}</b>
+          <i className="fa-solid fa-person-running" style={{ fontSize: '18px', color: PRIMARY_COLOR, marginBottom: '4px' }}></i>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: '#666' }}>Atividades</span>
+          <b style={{ fontSize: '15px', color: '#333' }}>{metricas.atividades}</b>
         </div>
 
         <div style={cardStyle}>
-          <i className="fa-solid fa-clock" style={{ fontSize: '22px', color: PRIMARY_COLOR, marginBottom: '5px' }}></i>
-          <span style={{ fontSize: '12px', fontWeight: '700', color: '#666' }}>Tempo Total</span>
-          <b style={{ fontSize: '16px', color: '#333' }}>{metricas.tempoTotal}</b>
+          <i className="fa-solid fa-clock" style={{ fontSize: '18px', color: PRIMARY_COLOR, marginBottom: '4px' }}></i>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: '#666' }}>Tempo Total</span>
+          <b style={{ fontSize: '15px', color: '#333' }}>{metricas.tempoTotal}</b>
         </div>
 
       </div>
 
-      {/* NAVIGATION BAR */}
-      <div style={{ position: 'fixed', bottom: 0, width: '100%', height: '85px', background: '#fff', borderTopLeftRadius: '25px', borderTopRightRadius: '25px', display: 'flex', alignItems: 'center', justifyContent: 'space-around', boxShadow: '0 -5px 15px rgba(0,0,0,0.05)', paddingBottom: '15px' }}>
+      {/* NAVIGATION BAR - Fixa e reduzida */}
+      <div style={{ position: 'fixed', bottom: 0, width: '100%', height: '75px', background: '#fff', borderTopLeftRadius: '25px', borderTopRightRadius: '25px', display: 'flex', alignItems: 'center', justifyContent: 'space-around', boxShadow: '0 -5px 15px rgba(0,0,0,0.05)', paddingBottom: '10px' }}>
         <div style={navItemStyle} onClick={() => router.push('/home')}><i className="fa-solid fa-house" style={{ color: PRIMARY_COLOR, fontSize: '18px' }}></i><span style={{ fontSize: '10px', fontWeight: '800', color: PRIMARY_COLOR }}>Home</span></div>
         <div style={navItemStyle} onClick={() => router.push('/atividades')}><i className="fa-solid fa-chart-line" style={{ color: '#CCC', fontSize: '18px' }}></i><span style={{ fontSize: '10px', fontWeight: '800', color: '#CCC' }}>Treinos</span></div>
         <div style={navItemStyle} onClick={() => router.push('/ranking')}><i className="fa-solid fa-trophy" style={{ color: '#CCC', fontSize: '18px' }}></i><span style={{ fontSize: '10px', fontWeight: '800', color: '#CCC' }}>Ranking</span></div>
@@ -231,10 +221,4 @@ function HomeContent() {
   );
 }
 
-export default function Home() { 
-  return (
-    <Suspense fallback={null}>
-      <HomeContent />
-    </Suspense>
-  ); 
-}
+export default function Home() { return <Suspense fallback={null}><HomeContent /></Suspense>; }
